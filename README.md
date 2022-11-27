@@ -17,3 +17,7 @@ apt-get update --fix-missing && apt-get install libsndfile1 ffmpeg libsox-fmt-al
 ```
 
 Then, create a python environment with python=3.7 and install the dependencies in `requirements.txt`.
+
+### Running
+
+For now, an example notebook to run the rearranger end-to-end is present `in notebooks/example.ipynb`. A cleaner rearrangement python package will be added soon.
