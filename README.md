@@ -20,4 +20,4 @@ Then, create a python environment with python=3.7 and install the dependencies i
 
 ### Running
 
-For now, an example notebook to run the rearranger end-to-end is present `in notebooks/example.ipynb`. A cleaner rearrangement python package will be added soon.
+For now, an example notebook to run the rearranger end-to-end is present in `notebooks/example.ipynb`. A cleaner rearrangement python package will be added soon.
