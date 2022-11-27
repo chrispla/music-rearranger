@@ -1,6 +1,12 @@
 PLEASE NOTE:
-All code from the paper "DEEP EMBEDDINGS AND SECTION FUSION
-IMPROVE MUSIC SEGMENTATION" also present in https://github.com/justinsalamon/musicseg_deepemb
-is protected by a separate license present in external/musicseg_deepemb. Namely, this includes the models directory in this repository and the musicsections package. Parts of the segmentation code in musicsections, also present in https://github.com/bmcfee/lsd_viz, are licensed under a separate license present in external/lsd_vis.
+All code from the paper "DEEP EMBEDDINGS AND SECTION FUSION IMPROVE MUSIC SEGMENTATION",
+also present in https://github.com/justinsalamon/musicseg_deepemb, is protected by a
+separate license present in external/musicseg_deepemb. Namely, this includes the models
+directory in this repository and the musicsections package. Parts of the segmentation
+code in musicsections, also present in https://github.com/bmcfee/lsd_viz, are licensed
+under a separate license present in external/lsd_vis.
 
-The rest of the code in this repository is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+The rest of the code in this repository is licensed under the Creative Commons 
+Attribution-NonCommercial-ShareAlike 4.0 International License. To view a copy of
+this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/ or send a
+letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
