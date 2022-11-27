@@ -7,9 +7,9 @@ Code for "Music rearrangement using hierarchical segmentation" paper.
 
 Install non-python dependencies:
 
-*ffmpeg
-*sox (with support for mp3)
-*libsndfile
+* ffmpeg
+* sox (with support for mp3)
+* libsndfile
 
 On Debian/Ubuntu you can install them with the following:
 ```
