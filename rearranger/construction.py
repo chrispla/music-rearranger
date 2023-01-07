@@ -17,12 +17,8 @@ def audio_constructor(y, sr, recon_beats, beat_times, crossfade):
     y_new = np.array([])
 
     # generate general linear crossfade masks
-    fade_in = np.ones(crossfade)
-    for i in range(crossfade):
-        fade_in[i] *= i / crossfade 
-    fade_out = np.ones(crossfade)
-    for i in range(crossfade):
-        fade_out[i] *= 1 - (i / crossfade)
+    fade_in = [i / crossfade for i in range(crossfade)]
+    fade_out = [1 - (i / crossfade) for i in range(crossfade)]
 
     # from beat encoding to intervals
     intervals = []
