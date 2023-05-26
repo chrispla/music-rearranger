@@ -33,10 +33,15 @@ After having computed the rearrangement, a pickle file and an audio file will be
 python rearrange.py --input_audio /path/to/audio/file --input_seg /path/to/segmentation/pickle/file --target_time 60
 ```
 Other useful options include:
+
 `--seg_method`: segmentation method to use. This currently includes the Salamon et al. 2021 segmentation method (`precise`) which is more accurate but slower, as well as the McFee & Ellis 2014 segmentation method (`fast`) which is less accurate but faster.
+
 `--use_gpu` (flag): whether to use the GPU for the feature computation for the `precise` segmentation.
+
 `--output_dir`: output directory for audio and pickle file.
+
 `--config`: path to configuration file with various segmentation, transition identification, and path finding parameters.
+
 `--plot` (flag): whether to save plots of the features and segmentation that is computed.
 
 ### Reference
