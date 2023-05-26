@@ -554,7 +554,7 @@ def embed_beats(A_rep,
     """
     # Build recurrence graph from deepsim
     R = librosa.segment.recurrence_matrix(
-        A_rep, 
+        A_rep,
         width=min(recwidth, min(A_rep.shape)),
         mode='affinity',
         metric=distance,
@@ -581,7 +581,7 @@ def embed_beats(A_rep,
 
     # Build recurrence graph from chroma
     chroma_R = librosa.segment.recurrence_matrix(
-        Hsync, 
+        Hsync,
         width=min(recwidth, min(Hsync.shape)),
         mode='affinity',
         metric='euclidean',
@@ -595,18 +595,16 @@ def embed_beats(A_rep,
     Rf = Rf[:m, :m]
     R_path = R_path[:m, :m]
     chroma_Rf = chroma_Rf[:m, :m]
-    
+
     if normalize_matrices:
         Rf = normalize_matrix(Rf, maxnorm=maxnorm)
         chroma_Rf = normalize_matrix(chroma_Rf, maxnorm=maxnorm)
         R_path = normalize_matrix(R_path, maxnorm=maxnorm)
-        
+
         A = (mu * gamma) * Rf + (mu * (1-gamma)) * chroma_Rf + (1 - mu) * R_path  # norm
     else:
         A = mu * Rf + mu * chroma_Rf + (1 - 2 * mu) * R_path  # no norm
 
-
-    #####################################################
     # Now let's compute the normalized Laplacian (LSD paper Eq. 10)
     L = scipy.sparse.csgraph.laplacian(A, normed=True)
 
@@ -618,6 +616,7 @@ def embed_beats(A_rep,
     evecs = scipy.ndimage.median_filter(evecs, size=(evecsmooth, 1))
 
     return evecs
+
 
 def combined_matrix(A_rep,
                     A_loc,
@@ -691,7 +690,7 @@ def combined_matrix(A_rep,
 
     # Build recurrence graph from chroma
     chroma_R = librosa.segment.recurrence_matrix(
-        Hsync, 
+        Hsync,
         width=min(recwidth, min(Hsync.shape)),
         mode='affinity',
         metric='euclidean',
@@ -708,12 +707,12 @@ def combined_matrix(A_rep,
     Rf = Rf[:m, :m]
     R_path = R_path[:m, :m]
     chroma_Rf = chroma_Rf[:m, :m]
-    
+
     if normalize_matrices:
         Rf = normalize_matrix(Rf, maxnorm=maxnorm)
         chroma_Rf = normalize_matrix(chroma_Rf, maxnorm=maxnorm)
         R_path = normalize_matrix(R_path, maxnorm=maxnorm)
-        
+
         A = (mu * gamma) * Rf + (mu * (1-gamma)) * chroma_Rf + (1 - mu) * R_path  # norm
     else:
         A = mu * Rf + mu * chroma_Rf + (1 - 2 * mu) * R_path  # no norm
@@ -799,14 +798,14 @@ def segment_features(features,
                      recurrence_width=9,
                      recurrence_smooth=9,                                           
                      eigenvec_smooth=9):
-    
+
     # unpack features
     Csync = features['Csync']
     Msync = features['Msync']
     Hsync = features['Hsync']
     beat_times = features['beat_times']
     audio_duration = features['audio_duration']
-    
+
     # safety check
     if Csync is None or Msync is None or Hsync is None:
         segs = make_single_section(audio_duration, N_LEVELS)
@@ -952,11 +951,11 @@ def make_beat_sync_features(filename,
     -------
     np.ndarray
         Csync, deepsim beat-sync features
-    np.ndarray 
+    np.ndarray
         Msync, fewshot beat-sync features
-    np.ndarray 
+    np.ndarray
         Hsync, CQT (harmony) beat-sync features
-    np.ndarray 
+    np.ndarray
         beat_times, in seconds
     float
         audio_duration in seconds
@@ -969,10 +968,10 @@ def make_beat_sync_features(filename,
     # Use a temporary folder to resample audio 
     # Folder and all contents will get automatically deleted
     with tempfile.TemporaryDirectory() as tempdir:
-        
+
         filename22 = os.path.join(tempdir, os.path.basename(os.path.splitext(filename)[0]) + "_22.wav")
         filename16 = os.path.join(tempdir, os.path.basename(os.path.splitext(filename)[0]) + "_16.wav")
-        
+
         tfm = sox.Transformer()
         tfm.convert(samplerate=22050, n_channels=1)
         tfm.build(filename, filename22)
@@ -991,8 +990,8 @@ def make_beat_sync_features(filename,
         if audio_duration < 1:
             return None, None, None, None, audio_duration
 
-        # beat_order (only produced by BeatNet)
-        beat_order = None
+        # beat_analysis (only produced by BeatNet)
+        beat_analysis = None
 
         if beats_file is not None:
             # Load beat times in seconds and convert to frames
@@ -1000,7 +999,7 @@ def make_beat_sync_features(filename,
             # return as "beats" (frames) and "beat_times" (seconds)
             beats, beat_times = load_beats(beats_file, audio_duration)
         else:
-            if beats_alg=="madmom":
+            if beats_alg == "madmom":
                 beat_times = madmom_beats(filename)
 
                 beats = librosa.time_to_frames(beat_times, sr=22050, hop_length=512)
@@ -1008,8 +1007,8 @@ def make_beat_sync_features(filename,
                     beat_times = np.insert(beat_times, 0, 0)
                 if beat_times[-1] < audio_duration:
                     beat_times = np.append(beat_times, audio_duration)
-            
-            elif beats_alg=="librosa":
+
+            elif beats_alg == "librosa":
                 # Get tempo and beat locations in frames
                 tempo, beats = librosa.beat.beat_track(y=y, sr=sr, trim=False)
                 print_verbose(f"tempo: {tempo}", LOG)
@@ -1018,21 +1017,21 @@ def make_beat_sync_features(filename,
                 # Get beat times in seconds
                 maxframe = librosa.core.samples_to_frames(len(y)) + 1
                 beat_times = librosa.frames_to_time(librosa.util.fix_frames(beats, x_min=0, x_max=maxframe), sr=sr)
-            
-            elif beats_alg=="beatnet":
-                beat_order = BeatNet_beats(filename)
+
+            elif beats_alg == "beatnet":
+                beat_analysis = BeatNet_beats(filename)
                 # get beat_times as formatted for the rest of the code
-                beat_times = np.asarray([b[0] for b in beat_order])
+                beat_times = np.asarray([b[0] for b in beat_analysis])
 
                 beats = librosa.time_to_frames(beat_times, sr=22050, hop_length=512)
                 if beat_times[0] > 0:
                     beat_times = np.insert(beat_times, 0, 0)
                 if beat_times[-1] < audio_duration:
                     beat_times = np.append(beat_times, audio_duration)
-                
+
             else:
                 raise Exception("beats_alg must be either 'madmom', 'beatnet', or 'librosa'")
-        
+
         # Harmonic CQT
         # Perform HPSS to obtain harmonic wave signal yh
         yh = librosa.effects.harmonic(y, margin=8)
@@ -1043,14 +1042,14 @@ def make_beat_sync_features(filename,
         print_verbose("chroma {}".format(C.shape), LOG)
         # Synchronize (harmonic-derived) CQT to beats (framewise)
         Hsync = librosa.util.sync(C, beats, aggregate=np.median)
-        
+
         # Compute deep similarity embeddings
         modelgrid = deepsim_model
         embedding_as_list = run_deepsim_inference(
-            y, 
-            modelgrid.base_model, 
-            modelgrid.args, 
-            modelgrid.session, 
+            y,
+            modelgrid.base_model,
+            modelgrid.args,
+            modelgrid.session,
             magicnorm=magicnorm).tolist()
         emb = np.asarray(embedding_as_list).T
 
@@ -1069,7 +1068,7 @@ def make_beat_sync_features(filename,
             Msync = librosa.util.sync(emb, beats)
 
         # Return all embeddings/featires, beat times, and audio file duration in seconds
-        return Csync, Msync, Hsync, beat_times, audio_duration, beat_order
+        return Csync, Msync, Hsync, beat_times, beat_analysis, audio_duration 
 
 
 def segment_file(audiofile,
@@ -1084,12 +1083,11 @@ def segment_file(audiofile,
                  recurrence_width=9,
                  recurrence_smooth=9,
                  eigenvec_smooth=9):
-    
-    
+
     # Compute beat-synchronized features
     Csync, Msync, Hsync, beat_times, audio_duration = \
         make_beat_sync_features(audiofile,
-                                deepsim_model, 
+                                deepsim_model,
                                 fewshot_model,
                                 beats_alg=beats_alg,
                                 beats_file=beats_file,
@@ -1097,18 +1095,18 @@ def segment_file(audiofile,
                                 magicnorm=MAGICNORM)
 
     features = {}
-    features['Csync'] = Csync 
+    features['Csync'] = Csync
     features['Msync'] = Msync
     features['Hsync'] = Hsync
-    features['beat_times'] = beat_times 
+    features['beat_times'] = beat_times
     features['audio_duration'] = audio_duration
 
-    segmentations = segment_features(features, 
+    segmentations = segment_features(features,
                                      min_duration=min_duration,
                                      mu=mu,
                                      gamma=gamma,
                                      recurrence_width=recurrence_width,
-                                     recurrence_smooth=recurrence_smooth,                                           
+                                     recurrence_smooth=recurrence_smooth,                                       
                                      eigenvec_smooth=eigenvec_smooth)
 
     return segmentations, features

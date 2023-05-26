@@ -14,7 +14,9 @@ tensorflow==2.7.0
 mir_eval==0.6
 more-itertools==8.14.0
 matplotlib
-torch
-torchvision
-torchsummary
+torch==1.1.0
+torchvision==0.2.1
+torchsummary==1.5.1
 madmom==0.16.1
+beatnet==1.0.0
+more-itertools==8.14.0

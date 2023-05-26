@@ -1,25 +1,24 @@
-"""
-Methods for formatting and quantizing the segmantation.
+"""Methods for formatting and quantizing the segmentation.
 """
 
 import numpy as np
 
 
-def structure_time_to_beats(fixed_levels, beat_times):
+def structure_time_to_beats(segmentation, beat_times):
     """
-    Convert the fixed_levels structure representation from
-    time to beats.
+    Convert the segmentation from time to beats.
     """
-    fixed_levels_beats = []
-    for level in fixed_levels:
+    segmentation_beats = []
+    for level in segmentation:
         current_level = ([], [])
         for boundaries, type in zip(level[0], level[1]):
-            boundaries = (np.where(beat_times==boundaries[0])[0][0], np.where(beat_times==boundaries[1])[0][0])
+            boundaries = (np.where(beat_times == boundaries[0])[0][0],
+                          np.where(beat_times == boundaries[1])[0][0])
             current_level[0].append(boundaries)
             current_level[1].append(type)
-        fixed_levels_beats.append(current_level)
+        segmentation_beats.append(current_level)
 
-    return fixed_levels_beats
+    return segmentation_beats
 
 
 def take_closest(downbeat_beats, beat):
@@ -45,11 +44,11 @@ def take_closest(downbeat_beats, beat):
 
 # might have some issues here with when the beat tracker detects the first beats
 # for example sometimes it's adding a pickup measure where there's mostly silence
-def quantize_to_measures(fixed_levels_beats, n_measures, beat_order, beat_times):
+def quantize_to_measures(segmentation_beats, n_measures, beat_analysis, beat_times):
     """Quantize a beat-indexed structure as represented by Adobe to
     a minimum of n measures.
     """
-    downbeat_times = np.asarray([b[0] for b in beat_order if b[1] == 1])
+    downbeat_times = np.asarray([b[0] for b in beat_analysis if b[1] == 1])
     n_measure_times = downbeat_times[::n_measures]
 
     # this is done informationally, not needed!
@@ -58,16 +57,16 @@ def quantize_to_measures(fixed_levels_beats, n_measures, beat_order, beat_times)
         downbeat_times[0] = 0
     if downbeat_times[-1] != beat_times[-1]:
         downbeat_times = np.append(downbeat_times, beat_times[-1])
-    downbeat_beats = [np.where(beat_times==t)[0][0] for t in downbeat_times]
+    downbeat_beats = [np.where(beat_times == t)[0][0] for t in downbeat_times]
 
     if n_measure_times[0] != 0:
         n_measure_times[0] = 0
     if n_measure_times[-1] != beat_times[-1]:
         n_measure_times = np.append(n_measure_times, beat_times[-1])
-    n_measure_beats = [np.where(beat_times==t)[0][0] for t in n_measure_times]
+    n_measure_beats = [np.where(beat_times == t)[0][0] for t in n_measure_times]
 
-    fixed_levels_n_measures = []
-    for level in fixed_levels_beats:
+    segmentation_n_measures = []
+    for level in segmentation_beats:
         current_level = ([], [])
         for boundaries, type in zip(level[0], level[1]):
             # if only segment, take boundaries
@@ -78,32 +77,44 @@ def quantize_to_measures(fixed_levels_beats, n_measures, beat_order, beat_times)
                 q_boundaries = (0, take_closest(n_measure_beats, boundaries[1]))
             # if last, always end in fake end beat
             elif boundaries == level[0][-1]:
-                q_boundaries = (take_closest(n_measure_beats, boundaries[0]), n_measure_beats[-1])
+                q_boundaries = (take_closest(n_measure_beats, boundaries[0]),
+                                n_measure_beats[-1])
             else:
-                q_boundaries = (take_closest(n_measure_beats, boundaries[0]), take_closest(n_measure_beats, boundaries[1]))
+                q_boundaries = (take_closest(n_measure_beats, boundaries[0]),
+                                take_closest(n_measure_beats, boundaries[1]))
             current_level[0].append(q_boundaries)
             current_level[1].append(type)
-        fixed_levels_n_measures.append(current_level)
+        segmentation_n_measures.append(current_level)
 
-    return fixed_levels_n_measures, downbeat_times, downbeat_beats, n_measure_beats
+    return segmentation_n_measures, downbeat_times, downbeat_beats, n_measure_beats
 
 
-def get_unique_segments(fixed_levels):
+def get_unique_segments(segmentation):
     """
     Remove segments that have the exact same boundaries AND segment type
     to make optimization more efficient. Works on both time- and beat-based
-    fixed_levels representations.
+    segmentation representations.
     """
     boundaries_type_pairs = []
     unique = []
-    for k, level in enumerate(fixed_levels):
+    for k, level in enumerate(segmentation):
         # replicate original structure
         current_level = ([], [])
         for boundaries, segtype in zip(level[0], level[1]):
             if (boundaries, segtype, ) not in boundaries_type_pairs:
                 boundaries_type_pairs.append((boundaries, segtype, ))
                 current_level[0].append(boundaries)
-                current_level[1].append(segtype)       
+                current_level[1].append(segtype)
         unique.append(current_level)
 
     return unique
+
+
+def get_target_n_beats(target_seconds, beat_analysis):
+    """Estimate how many beats are needed to create a rearrangement
+    that is approximately the target_time.
+    """
+    mean_beat_duration = np.mean(np.diff(beat_analysis[:, 0]))
+    target_n_beats = int(np.round(target_seconds / mean_beat_duration))
+
+    return target_n_beats

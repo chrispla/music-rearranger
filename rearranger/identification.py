@@ -9,10 +9,10 @@ import more_itertools
 
 
 def long_diagonals(A,
-                   length=4,  # consecutive beats over threshold in diagonal 
+                   length=4,  # consecutive beats over threshold in diagonal
                    percentile=90):
     """
-    Given a recurrence matrix, find consecutive diagonals with 
+    Given a recurrence matrix, find consecutive diagonals with
     defined minimum length. Optionally filter the recurrence
     matrix by getting points over a certain percentile.
     """
@@ -153,17 +153,17 @@ def get_transition_point(current_boundaries,
     return best_p, rank
 
 
-def segment_transition_points(fixed_levels,
-                              quantization,
-                              beats_in_measure,
-                              patterns):
+def cross_segment_points(segmentation,
+                         quantization,
+                         beats_in_measure,
+                         patterns):
     """
     Compute all entry/exit pairs for segment transitions. Uses the
     neighbor beat transition algorithm to find smoother points
     around segment boundaries.
 
     Args:
-        fixed_levels (list): structure - make sure it only has unique segments, and is quantized as desired
+        segmentation (list): structure - make sure it only has unique segments, and is quantized as desired
         quantization (int): the number of measures the structure has been quantized to
         beats_in_measure (int): the number of beats in each measure - assumes it remains consistent 
     Returns:
@@ -173,7 +173,7 @@ def segment_transition_points(fixed_levels,
     segment_points = []
 
     # Iterate through all segments
-    for level in fixed_levels:
+    for level in segmentation:
         for current_boundaries, current_segtype in zip(level[0], level[1]):
             # Iterate through all candidate segments (first segment not included)
             for candidate_boundaries, candidate_segtype in zip(level[0][1:], level[1][1:]):
@@ -201,11 +201,11 @@ def segment_transition_points(fixed_levels,
     return segment_points
 
 
-def type_transition_points(fixed_levels,
-                           levels_list,
-                           min_d_len,
-                           patterns,
-                           beats_in_measure):
+def intra_segment_points(segmentation,
+                         levels_list,
+                         min_d_len,
+                         patterns,
+                         beats_in_measure):
     """
     Compute all type transitions, meaning all within-segment
     transitions for the given levels_list that stem from a
@@ -216,9 +216,9 @@ def type_transition_points(fixed_levels,
     type_points = []
 
     for l in levels_list:
-        for boundaries, segtype in zip(fixed_levels[l][0], fixed_levels[l][1]):
+        for boundaries, segtype in zip(segmentation[l][0], segmentation[l][1]):
             # traverse diagonals which are across an integer multiple of
-            # beats_in_measure, so that jumps only across beats with the 
+            # beats_in_measure, so that jumps only across beats with the
             # same "function" (i.e. a beat 3 with a beat 3) occur
             for i in range(0, boundaries[1]-boundaries[0], beats_in_measure):
                 x = boundaries[0]
@@ -228,11 +228,11 @@ def type_transition_points(fixed_levels,
                 entry_p = -1
                 while y < boundaries[1]:
                     if patterns[x, y] != 0:
-                        if active_d == False:
+                        if active_d is False:
                             entry_p = [x, y]
                             active_d = True
                     else:  # if patterns[x, y] == 0
-                        if active_d == True:
+                        if active_d is True:
                             # if diagonal ends there, check if >=min_d_len
                             d_len = x - entry_p[0]
                             if d_len >= min_d_len:

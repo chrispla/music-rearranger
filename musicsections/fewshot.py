@@ -1,12 +1,12 @@
-import numpy as np
+import os
+
 import librosa
+import numpy as np
 import torch
 import torch.cuda
 from torch.autograd import Variable
-import os
-import glob
+
 from .fewshot_model import Conv4
-from torchsummary import summary
 
 
 def get_best_model_file(checkpoint_dir):
@@ -29,7 +29,7 @@ def get_best_model_file(checkpoint_dir):
         return get_resume_file(checkpoint_dir)
 
 
-def load_fewshot_model(checkpoint_dir, is_file=False, gpu=0):
+def load_fewshot_model(checkpoint_dir, is_file=False, gpu=False):
     """Load fewshot model given path to folder containing model file
 
     Parameters
@@ -38,8 +38,7 @@ def load_fewshot_model(checkpoint_dir, is_file=False, gpu=0):
         Path to folder containing model file
     is_file : bool, optional
         Set to True if checkpoint_dir is actually direct path to model file, by default False
-    gpu : int, optional
-        Legacy, by default 0
+    gpu : bool
 
     Returns
     -------
@@ -47,13 +46,18 @@ def load_fewshot_model(checkpoint_dir, is_file=False, gpu=0):
         Few-shot model
     """
     if is_file:
-            modelfile = checkpoint_dir
+        modelfile = checkpoint_dir
     else:
         modelfile = get_best_model_file(checkpoint_dir)
     model = Conv4()
 
-    device = torch.device('cpu')
-    tmp = torch.load(modelfile, map_location='cpu')
+    if torch.cuda.is_available() and gpu is True:
+        model = model.cuda()
+        tmp = torch.load(modelfile)
+    else:
+        device = torch.device('cpu')
+        tmp = torch.load(modelfile, map_location='cpu')
+
     state = tmp['state']
     state_keys = list(state.keys())
     for i, key in enumerate(state_keys):
@@ -94,9 +98,9 @@ def fewshot_inference(model, x):
 
 
 # simulate hop size of 512/22050 to match hop size of other features (deepsim and cqt)
-def compute_mel_features_customhop(query, 
-                                   args, 
-                                   custom_hop=512/22050, 
+def compute_mel_features_customhop(query,
+                                   args,
+                                   custom_hop=512/22050,
                                    verbose=True):
     """Compute mel spectrogram
 
@@ -123,7 +127,7 @@ def compute_mel_features_customhop(query,
     melBin = 128
     sr = 16000
     y = query
-    
+
     hop_sec = hop/sr
     if verbose:
         print(custom_hop)  # custom hop in seconds
@@ -199,11 +203,11 @@ def run_fewshot_inference(audiofile, fewshot_model, verbose=False):
     # compute input features for model (log-mel-spec)
     if verbose:
         print("Computing mel...")
-    log_mels = compute_mel_features_customhop(audio, 
-                                              None, 
-                                              custom_hop=512/22050, 
-                                              verbose=False)  
-    
+    log_mels = compute_mel_features_customhop(audio,
+                                              None,
+                                              custom_hop=512/22050,
+                                              verbose=False)
+
     n_mel_frames = 500
     idx = 0
     feats = []

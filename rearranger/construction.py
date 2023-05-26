@@ -5,7 +5,7 @@ Simple recording construction.
 import numpy as np  # for matrix processing
 
 
-def audio_constructor(y, sr, recon_beats, beat_times, crossfade):
+def construct_audio(y, sr, recon_beats, beat_times, crossfade):
     """
     crossfade in seconds
     """

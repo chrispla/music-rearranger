@@ -14,13 +14,13 @@ def configure_gpus():
     if gpus:
         try:
             for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, False)
+                tf.config.experimental.set_memory_growth(gpu, True)
         except RuntimeError as e:
             print(e)
 
 
 # Globally force all GPUS to "grow" their memory
-# configure_gpus()
+configure_gpus()
 
 
 def compute_mel_features(query, args, emb_hop=1, verbose=False, magicnorm=True):
