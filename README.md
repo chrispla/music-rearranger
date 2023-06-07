@@ -1,5 +1,5 @@
 # Music rearranger
-Rearrange a music recording so that it matches a new desired duration. Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper.
+Rearrange a music recording so that it matches a new desired duration. Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper (https://arxiv.org/abs/2305.07347). 
 
 ### Disclaimer
 This code is not 100% reflecting the methods described in the paper. Most notably, the path finding approach has been replaced with a simpler one until I manage to debug the original. This simpler one, however, might sometimes fail to find a path, and does not prioritize transition points based on their similarity. 
