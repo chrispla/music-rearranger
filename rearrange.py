@@ -16,8 +16,7 @@ from rearranger.formatting import (get_target_n_beats, get_unique_segments,
                                    structure_time_to_beats)
 from rearranger.identification import (common_patterns, cross_segment_points,
                                        intra_segment_points)
-from rearranger.optimization import (get_ideal_transitions, get_transitions,
-                                     get_nonnegative_transitions,
+from rearranger.optimization import (get_transitions,
                                      less_transitions_algorithm, greedy_deep_search)
 from rearranger.plotting import save_useful_plots
 from rearranger.segmentation import fast_segmentation, precise_segmentation
@@ -160,8 +159,8 @@ if __name__ == "__main__":
         beats_in_measure=int(np.max(beat_analysis[:, 1])),
         patterns=patterns)
     print("  > Cross-segment points:", len(cross_points))
-    print("    > Rank 1 points:", len([p for p in cross_points if p[1] == 1]))
-    print("    > Rank 2 points:", len([p for p in cross_points if p[1] == 2]))
+    print("    > Smooth points:", len([p for p in cross_points if p[1] != 0]))
+    print("    > Boundary points:", len([p for p in cross_points if p[1] == 0]))
 
     # Get intra-segment points
     intra_points = intra_segment_points(
@@ -174,26 +173,11 @@ if __name__ == "__main__":
 
     print("> Finding rearrangement path...")
     # Path finding
-    if config["transition_types"] == "ideal":
-        transitions = get_ideal_transitions(
-            cross_points+intra_points,
-            patterns.shape[0],
-            neighbors=True)
-        jumps = [p for p in intra_points+cross_points if p[1] == 1]
-    elif config["transition_types"] == "nonnegative":
-        transitions = get_nonnegative_transitions(
-            cross_points+intra_points,
-            patterns.shape[0],
-            neighbors=True)
-        jumps = [p for p in intra_points+cross_points if p[1] > p[0]]
-    elif config["transition_types"] == "all":
-        transitions = get_transitions(
-            cross_points+intra_points,
-            patterns.shape[0],
-            neighbors=True)
-        jumps = intra_points + cross_points
-    else:
-        raise ValueError("Invalid transition type.")
+    transitions, similarities = get_transitions(
+        points=cross_points+intra_points,
+        n_beats=patterns.shape[0],
+        type=config["transition_types"],
+        neighbors=True)
 
     if config["path_finding_algorithm"] == "greedy_deep_search":
         import warnings
@@ -209,11 +193,12 @@ if __name__ == "__main__":
         warnings.warn("""Searching for rearrangement with up to 3 transitions. The solution
                          might not be found, or might not be optimal.""",
                       stacklevel=2)
-    beat_list = less_transitions_algorithm(
-        transitions=jumps,
-        target_beats=get_target_n_beats(target_seconds, beat_analysis),
-        total_beats=patterns.shape[0],
-        beat_analysis=beat_analysis)
+        beat_list = less_transitions_algorithm(
+            transitions=transitions,
+            similarities=similarities,
+            target_beats=get_target_n_beats(target_seconds, beat_analysis),
+            total_beats=patterns.shape[0],
+            beat_analysis=beat_analysis)
 
     print("> Saving rearrangement...")
     # Construct audio
