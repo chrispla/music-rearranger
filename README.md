@@ -1,12 +1,13 @@
-# Music rearranger
-
-Rearrange a music recording so that it matches a new desired duration. Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper (https://arxiv.org/abs/2305.07347).
+# music-rearranger
+#### Rearrange a music recording so that it matches a new desired duration.
 
 ![Rearrangement example](https://github.com/chrispla/music-rearranger/blob/main/examples/rearrangement.gif)
 
+Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper (https://arxiv.org/abs/2305.07347).
+
 ### Disclaimer
 
-This code is not 100% reflecting the methods described in the paper. Most notably, the path finding approach has been replaced with a simpler one until I manage to debug the original. This simpler one, however, might sometimes fail to find a path, and does not prioritize transition points based on their similarity. 
+This code is not 100% reflecting the methods described in the paper. Most notably, the path finding approach has been replaced with a simpler one until I manage to debug the original. This simpler one, however, might sometimes fail to find a path.
 
 I'm aiming to develop this package further, including doing some work on finding more optimal default parameters for the segmentation and transition point identification configuration. Submiting issues and pull request is welcomed and appreciated.
 
@@ -39,7 +40,7 @@ There are two key aspects to this rerrangement method: 1. segmentation and 2. pa
 python rearrange.py --input_audio /path/to/audio/file --target_time 60
 ```
 
-where `--target_time` is the desired duration of the rearrangement in seconds.
+where the value of `--target_time` is the desired duration of the rearrangement in seconds.
 
 After having computed the rearrangement, a pickle file and an audio file will be created. You can use the pickle file as an argument so that you don't recompute the structure every time.
 
