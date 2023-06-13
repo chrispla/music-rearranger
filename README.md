@@ -2,7 +2,7 @@
 
 Rearrange a music recording so that it matches a new desired duration. Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper (https://arxiv.org/abs/2305.07347).
 
-![](https://github.com/chrispla/music-rearranger/examples/rearrangement.gif)
+![Rearrangement example](https://github.com/chrispla/music-rearranger/blob/main/examples/rearrangement.gif)
 
 ### Disclaimer
 
