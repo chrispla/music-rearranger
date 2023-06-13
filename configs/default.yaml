@@ -16,12 +16,13 @@ min_seg_size: 1  # minimum segmentation duration in measures, if not 1 uses Sala
                  # et al.'s segment fusion algorithm
 min_measure: 1  # default measure number for segmentation quantization
 
-# CROSS-SEGMENT TRANSITION-POINT IDENTIFICATION
-cross_pattern_length: 2  # minimum diagonal length to be a candidate pattern
-cross_pattern_percentile: 50  # connectivity strength threshold for candidate pattern selection
-
-# INTRA-SEGMENT TRANSITION-POINT IDENTIFICATION
-intra_pattern_length: 2  # minimum diagonal length to be a candidate pattern
+# TRANSITION POINT IDENTIFICATION
+similarity_percentile: 90  # similarity percentile for points to be considered an ideal transition.
+                           # Increase this if you're getting transitions that are not smooth enough
+                           # (the points aren't similar enough), reduce it if you aren't getting 
+                           # enough points. This percentile is applied to the recurrence graph that
+                           # already connects only nearest neighbors.
+pattern_length: 2  # minimum diagonal length to be a candidate pattern
 intra_levels_list: [2, 3, 4, 5, 6]  # levels to search for intra-segment connections
 
 # PATH FINDING

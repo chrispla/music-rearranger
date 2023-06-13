@@ -99,7 +99,8 @@ def common_patterns(Csync, Msync, Hsync, length, percentile):
     for i in range(Cpat.shape[0]):
         for j in range(Cpat.shape[1]):
             if Cpat[i, j] == 1 and Mpat[i, j] == 1 and Hpat[i, j] == 1:
-                all_pat[i, j] = 1
+                # weight point by similarity
+                all_pat[i, j] = (Ccon[i, j] + Mcon[i, j] + Hcon[i, j])/3.
 
     # make symmetric of the lower triangle
     patterns = np.tril(all_pat) + np.triu(all_pat.T, 1)
@@ -107,14 +108,12 @@ def common_patterns(Csync, Msync, Hsync, length, percentile):
     return patterns
 
 
-def get_transition_point(current_boundaries,
-                         candidate_boundaries,
-                         radius,
-                         patterns):
-    """
-    Get best neighbor beat transitions for 2 segments.
-    Check for the longest, closest diagonal of at least
-    2 consecutive pattern beats.
+def get_best_transition_point(current_boundaries,
+                              candidate_boundaries,
+                              radius,
+                              patterns):
+    """Get best neighbor beat transitions for 2 segments.
+    Check for the longest, closest diagonal of at least 2 units.
     """
     # get matching beats
     points = []
@@ -129,9 +128,9 @@ def get_transition_point(current_boundaries,
     # get ranges of consecutive matches
     diagonals = [list(group) for group in more_itertools.consecutive_groups(points)]
 
-    # if there are no diagonals, return boundary, rank 2
+    # if there are no diagonals, return boundary with a similarity of 0
     if not diagonals:
-        return 0, 2
+        return 0, 0
 
     # get longest, closest diagonal
     best_d = []
@@ -142,39 +141,87 @@ def get_transition_point(current_boundaries,
             # if same length, get closest
             if np.abs(np.mean(d)) < np.abs(np.mean(best_d)):
                 best_d = d
-    # if best is only of length 1, discard for now
-    if len(best_d) == 1:
-        return 0, 2
+    # hm, but is the boundary really better than a single point match?
+    if len(best_d) < 2:
+        return 0, 0
 
     # return the middle beat of best diagonal (round up if even), rank 1
     best_p = best_d[int(np.ceil(len(best_d)/2))]
-    rank = 1
+    similarity = 1
 
-    return best_p, rank
+    return best_p, similarity
+
+
+def get_all_transition_points(current_boundaries,
+                              candidate_boundaries,
+                              radius,
+                              patterns):
+    """Get all neighbor beat transitions for 2 segments.
+    Check for all diagonals of at least 2 consecutive
+    pattern beats.
+    """
+    # get matching beats
+    points = []
+
+    # move across the diagonal
+    for r in range(-radius, min(radius+1,  # assumes 1st segment isn't candidate
+                                patterns.shape[0]-candidate_boundaries[0],
+                                patterns.shape[0]-current_boundaries[1])):
+        if patterns[current_boundaries[1]+r, candidate_boundaries[0]+r] != 0:
+            points.append(r)
+
+    # get ranges of consecutive matches
+    diagonals = [list(group) for group in more_itertools.consecutive_groups(points)]
+
+    # if there are no diagonals, return boundary with a similarity of 0
+    if not diagonals:
+        return [(0, 0)]
+
+    all_points = []
+    for d in diagonals:
+        if len(d) < 2:
+            # hm, but is the boundary really better than a single point match?
+            return [(0, 0)]
+        point = d[int(np.ceil(len(d)/2))]
+        similarity = patterns[
+            current_boundaries[1] + point,
+            candidate_boundaries[0] + point]
+        all_points.append((point, similarity))
+
+    return all_points
 
 
 def cross_segment_points(segmentation,
                          quantization,
                          beats_in_measure,
-                         patterns):
-    """
-    Compute all entry/exit pairs for segment transitions. Uses the
+                         patterns,
+                         point_types="all"):
+    """Compute all entry/exit pairs for segment transitions. Uses the
     neighbor beat transition algorithm to find smoother points
     around segment boundaries.
 
     Args:
-        segmentation (list): structure - make sure it only has unique segments, and is quantized as desired
+        segmentation (list): structure - make sure it only has unique segments,
+                                         and is quantized as desired
         quantization (int): the number of measures the structure has been quantized to
-        beats_in_measure (int): the number of beats in each measure - assumes it remains consistent 
+        beats_in_measure (int): the number of beats in each measure
+                                assuming it remains consistent (which is a bad
+                                limitation of this rearranger :'))
+        patterns (np.array): the common patterns matrix
+        point_types (str): whether to return "all" neighbor points larger than min diagonal,
+                           or only the "best" one for each segment transition
     Returns:
-        segment_points (list): list of entry/exit pairs in the format ([entry_beat, exit_beat], rank)])
+        segment_points (list): list of entry/exit pairs in the format
+                               ([entry_beat, exit_beat], rank)])
     """
 
     segment_points = []
+    count = 0
 
     # Iterate through all segments
     for level in segmentation:
         for current_boundaries, current_segtype in zip(level[0], level[1]):
+            count += 1
             # Iterate through all candidate segments (first segment not included)
             for candidate_boundaries, candidate_segtype in zip(level[0][1:], level[1][1:]):
 
@@ -182,22 +229,39 @@ def cross_segment_points(segmentation,
                 if current_segtype == candidate_segtype:
                     continue
                 # Discard candidate if overlapping
-                if candidate_boundaries[0] >= current_boundaries[0] and candidate_boundaries[0] <= current_boundaries[1]:
+                if (candidate_boundaries[0] >= current_boundaries[0] and
+                   candidate_boundaries[0] <= current_boundaries[1]):
                     continue
-                if candidate_boundaries[1] <= current_boundaries[1] and candidate_boundaries[1] >= current_boundaries[0]:
+                if (candidate_boundaries[1] <= current_boundaries[1] and
+                   candidate_boundaries[1] >= current_boundaries[0]):
                     continue
-                if candidate_boundaries[0] >= current_boundaries[0] and candidate_boundaries[1] <= current_boundaries[1]:
+                if (candidate_boundaries[0] >= current_boundaries[0] and
+                   candidate_boundaries[1] <= current_boundaries[1]):
                     continue
-                if candidate_boundaries[0] <= current_boundaries[0] and candidate_boundaries[1] >= current_boundaries[1]:
+                if (candidate_boundaries[0] <= current_boundaries[0] and
+                   candidate_boundaries[1] >= current_boundaries[1]):
                     continue
 
-                # If suitable candidate, find best neighbor transition point
-                best_point, rank = get_transition_point(current_boundaries=current_boundaries,
-                                                        candidate_boundaries=candidate_boundaries,
-                                                        radius=beats_in_measure*quantization,
-                                                        patterns=patterns)
-                segment_points.append(([current_boundaries[1]+best_point, candidate_boundaries[0]+best_point], rank))
-
+                # If suitable candidate, find best neighbor transition point(s)
+                if point_types == "best":
+                    best_point, similarity = get_best_transition_point(
+                        current_boundaries=current_boundaries,
+                        candidate_boundaries=candidate_boundaries,
+                        radius=beats_in_measure*quantization,
+                        patterns=patterns)
+                    segment_points.append(
+                        ([current_boundaries[1]+best_point, candidate_boundaries[0]+best_point],
+                         similarity))
+                if point_types == "all":
+                    all_points = get_all_transition_points(
+                        current_boundaries=current_boundaries,
+                        candidate_boundaries=candidate_boundaries,
+                        radius=beats_in_measure*quantization,
+                        patterns=patterns)
+                    for point, similarity in all_points:
+                        segment_points.append(
+                            ([current_boundaries[1]+point, candidate_boundaries[0]+point],
+                             similarity))
     return segment_points
 
 
@@ -237,9 +301,13 @@ def intra_segment_points(segmentation,
                             d_len = x - entry_p[0]
                             if d_len >= min_d_len:
                                 # and save the mid point, if it doesn't already exist
-                                mid_p = [entry_p[0]+int(np.ceil(d_len/2)), entry_p[1]+int(np.ceil(d_len/2))]
+                                mid_p = [
+                                    entry_p[0]+int(np.ceil(d_len/2)),
+                                    entry_p[1]+int(np.ceil(d_len/2))]
                                 if (mid_p, 1) not in type_points:
-                                    type_points.append((mid_p, 1))
+                                    type_points.append(
+                                        (mid_p,
+                                         patterns[mid_p[0], mid_p[1]]))
                             active_d = False
 
                     x += 1
