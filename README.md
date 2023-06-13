@@ -20,11 +20,16 @@ Install non-python dependencies:
 
 On Debian/Ubuntu you can install them with the following:
 
-```
+```bash
 apt-get update --fix-missing && apt-get install libsndfile1 ffmpeg libsox-fmt-all sox -y
 ```
 
-Then, create a python environment with python=3.7 and install the dependencies in `requirements.txt`.
+Then, create a python environment with python=3.7 and install the dependencies in `requirements.txt`. For example, using a conda environment:
+```bash
+conda create -n rearranger python=3.7
+conda activate rearranger
+pip install -r requirement.txt
+```
 
 ### Running
 
