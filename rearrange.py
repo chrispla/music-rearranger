@@ -150,8 +150,8 @@ if __name__ == "__main__":
         Csync=Csync,
         Msync=Msync,
         Hsync=Hsync,
-        length=config["cross_pattern_length"],
-        percentile=config["cross_pattern_percentile"])
+        length=config["pattern_length"],
+        percentile=config["similarity_percentile"])
 
     # Get cross-segment points
     cross_points = cross_segment_points(
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     intra_points = intra_segment_points(
         segmentation=segmentation_n_measures,
         levels_list=config["intra_levels_list"],
-        min_d_len=config["intra_pattern_length"],
+        min_d_len=config["pattern_length"],
         patterns=patterns,
         beats_in_measure=int(np.max(beat_analysis[:, 1])))
     print("  > Intra-segment points:", len(intra_points))
