@@ -305,7 +305,9 @@ def intra_segment_points(segmentation,
                                     entry_p[0]+int(np.ceil(d_len/2)),
                                     entry_p[1]+int(np.ceil(d_len/2))]
                                 if (mid_p, 1) not in type_points:
-                                    type_points.append((mid_p, 1))
+                                    type_points.append(
+                                        (mid_p,
+                                         patterns[mid_p[0], mid_p[1]]))
                             active_d = False
 
                     x += 1
