@@ -9,7 +9,7 @@ Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper
 
 This code is not 100% reflecting the methods described in the paper. Most notably, the path finding approach has been replaced with a simpler one until I manage to debug the original. This simpler one, however, might sometimes fail to find a path.
 
-I'm aiming to develop this package further, including doing some work on finding more optimal default parameters for the segmentation and transition point identification configuration. Submiting issues and pull request is welcomed and appreciated.
+I'm aiming to develop this package further, including doing some work on finding more optimal default parameters for the segmentation and transition point identification configuration. Submitting issues and pull request is welcomed and appreciated.
 
 ### Installation
 
