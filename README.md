@@ -29,7 +29,7 @@ Then, create a python environment with python=3.7 and install the dependencies i
 ```bash
 conda create -n rearranger python=3.7
 conda activate rearranger
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ### Running
