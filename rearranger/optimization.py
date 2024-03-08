@@ -28,6 +28,10 @@ def get_transitions(points, n_beats, type="ideal", neighbors=True):
                 similarities[(p[0][0], p[0][1])] = p[1]
         else:
             transitions[p[0][0]] = [p[0][1]]
+            # example point
+            # ([37, 100], 0.4210611383120219)
+            # ([from, to], cost)
+            # ([p[0][0], p[0][1]], p[1])
             similarities[(p[0][0], p[0][1])] = p[1]
     return transitions, similarities
 

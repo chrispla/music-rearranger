@@ -164,7 +164,7 @@ def fast_segmentation(
     Cnorm = np.cumsum(embedding**2, axis=1)**0.5
     segmentations = []
     for k in range(1, min(config["n_levels"]+1, embedding.shape[0]+1)):
-        segmentations.append(musicssctions.core.cluster(
+        segmentations.append(musicsections.core.cluster(
             embedding, Cnorm, k, beat_times))
 
     # Reindex section IDs for multi-level consistency
