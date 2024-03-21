@@ -1,8 +1,6 @@
 IN:=kikoru.wav
 DUR:=60
-# CMD:=python rearrange.py --input_audio audio/kikoru.wav --plot --target_time 60
-CMD=python rearrange.py --input_audio audio/${IN} --plot --target_time ${DUR}
-T_CMD=python rearrange.py --input_audio ${IN} --plot --target_time ${DUR}
+CMD=python rearrange.py --config --use_gpu configs/gpu.yaml --input_audio audio/${IN} --plot --target_time ${DUR}
 
 run: 
 	docker run --rm -v .:/app -it --name plac-test plac $(CMD) --seg_method=fast
