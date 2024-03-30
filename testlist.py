@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 CMD = (
-    "docker run --rm -v .:/app --name plac-test-{id} plac "
+    "docker run --rm --gpus all -v .:/app --name plac-test-{id} plac "
     "python rearrange.py "
     "--input_audio \"{audio_file}\" "
     "--plot --target_time {duration} "
