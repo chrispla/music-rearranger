@@ -8,9 +8,19 @@ import librosa
 import numpy as np
 import scipy
 import sox
-from BeatNet.BeatNet import BeatNet
 
 import musicsections
+import musicsections.core as musicsections_core
+from musicsections.compat import patch_legacy_audio_dependencies
+
+patch_legacy_audio_dependencies()
+
+try:
+    from BeatNet.BeatNet import BeatNet
+    BEATNET_IMPORT_ERROR = None
+except ImportError as exc:
+    BeatNet = None
+    BEATNET_IMPORT_ERROR = exc
 
 
 def precise_segmentation(
@@ -25,7 +35,7 @@ def precise_segmentation(
     model_fewshot = musicsections.load_fewshot_model(fewshot_model_dir, gpu=use_gpu)
 
     # Compute beat-synced features
-    Csync, Msync, Hsync, beat_times, beat_analysis, _ = musicsections.core.make_beat_sync_features(
+    Csync, Msync, Hsync, beat_times, beat_analysis, _ = musicsections_core.make_beat_sync_features(
         filename=audio_filepath,
         deepsim_model=model_deepsim,
         fewshot_model=model_fewshot,
@@ -35,7 +45,7 @@ def precise_segmentation(
         magicnorm=True)
 
     # Get filtered combined matrix
-    R = musicsections.core.combined_matrix(
+    R = musicsections_core.combined_matrix(
         Csync,
         Msync,
         Hsync,
@@ -57,11 +67,11 @@ def precise_segmentation(
     Cnorm = np.cumsum(embedding**2, axis=1)**0.5
     segmentations = []
     for k in range(1, min(config["n_levels"]+1, embedding.shape[0]+1)):
-        segmentations.append(musicsections.core.cluster(
+        segmentations.append(musicsections_core.cluster(
             embedding, Cnorm, k, beat_times))
 
     # Reindex section IDs for multi-level consistency
-    levels = musicsections.core.reindex(segmentations)
+    levels = musicsections_core.reindex(segmentations)
 
     # Segment fusion
     segmentation = None
@@ -70,13 +80,13 @@ def precise_segmentation(
     else:
         segs_list = []
         for i in range(1, len(levels) + 1):
-            segs_list.append(musicsections.core.clean_segments(
+            segs_list.append(musicsections_core.clean_segments(
                 levels,
                 min_duration=config["min_seg_size"],
                 fix_level=i,
                 verbose=False))
 
-    segmentation = musicsections.core.segments_to_levels(segs_list)
+    segmentation = musicsections_core.segments_to_levels(segs_list)
 
     return segmentation, beat_times, beat_analysis, R, Csync, Msync, Hsync
 
@@ -108,6 +118,8 @@ def fast_segmentation(
                                                        hop_length=512)), ref=np.max)
 
         # Beat tracking
+        if BeatNet is None:
+            raise ImportError("BeatNet is required for fast segmentation.") from BEATNET_IMPORT_ERROR
         estimator = BeatNet(1, mode='offline', inference_model='DBN', plot=[], thread=False)
         beat_analysis = estimator.process(new_filepath)
         # get beat_times as formatted for the rest of the code
@@ -164,11 +176,11 @@ def fast_segmentation(
     Cnorm = np.cumsum(embedding**2, axis=1)**0.5
     segmentations = []
     for k in range(1, min(config["n_levels"]+1, embedding.shape[0]+1)):
-        segmentations.append(musicssctions.core.cluster(
+        segmentations.append(musicsections_core.cluster(
             embedding, Cnorm, k, beat_times))
 
     # Reindex section IDs for multi-level consistency
-    levels = musicsections.core.reindex(segmentations)
+    levels = musicsections_core.reindex(segmentations)
 
     # Segment fusion
     segmentation = None
@@ -177,13 +189,13 @@ def fast_segmentation(
     else:
         segs_list = []
         for i in range(1, len(levels) + 1):
-            segs_list.append(musicsections.core.clean_segments(
+            segs_list.append(musicsections_core.clean_segments(
                 levels,
                 min_duration=config["min_seg_size"],
                 fix_level=i,
                 verbose=False))
 
-    segmentation = musicsections.core.segments_to_levels(segs_list)
+    segmentation = musicsections_core.segments_to_levels(segs_list)
 
     # returning Csync twice here to retain the format of the precise function
     return segmentation, beat_times, beat_analysis, R, Csync, Msync, Csync

@@ -3,8 +3,6 @@
 # Original code license: https://github.com/bmcfee/lsd_viz/blob/main/LICENSE.md (enclosed in external/lsd_viz)
 # Reference: McFee, Brian, and Dan Ellis. "Analyzing Song Structure with Spectral Clustering." ISMIR. 2014.
 import librosa
-import madmom.features.beats
-from BeatNet.BeatNet import BeatNet
 import numpy as np
 import scipy
 import sklearn.cluster
@@ -13,8 +11,19 @@ import os
 import sox
 import time
 from collections import defaultdict
-from .deepsim import run_deepsim_inference
-from .fewshot import run_fewshot_inference
+from .compat import patch_legacy_audio_dependencies
+
+patch_legacy_audio_dependencies()
+
+try:
+    import madmom.features.beats as madmom_beats_backend
+except ImportError:
+    madmom_beats_backend = None
+
+try:
+    from BeatNet.BeatNet import BeatNet
+except ImportError:
+    BeatNet = None
 
 
 # CONSTANTS
@@ -867,8 +876,10 @@ def madmom_beats(audiofile):
     list
         List of beat times in seconds
     """
-    proc = madmom.features.beats.CRFBeatDetectionProcessor(fps=100)
-    act = madmom.features.beats.RNNBeatProcessor()(audiofile)
+    if madmom_beats_backend is None:
+        raise ImportError("madmom is required for beats_alg='madmom'.")
+    proc = madmom_beats_backend.CRFBeatDetectionProcessor(fps=100)
+    act = madmom_beats_backend.RNNBeatProcessor()(audiofile)
     beat_times = np.asarray(proc(act))
     return beat_times
 
@@ -882,6 +893,8 @@ def BeatNet_beats(filename):
     time (i.e. [1, 1.23s], [2, 2.34s]) which we'll later need, hence the
     inconsistent returns.
     """
+    if BeatNet is None:
+        raise ImportError("BeatNet is required for beats_alg='beatnet'.")
     estimator = BeatNet(1, mode='offline', inference_model='DBN', plot=[], thread=False)
     beats = estimator.process(filename)
 
@@ -1035,15 +1048,16 @@ def make_beat_sync_features(filename,
         # Harmonic CQT
         # Perform HPSS to obtain harmonic wave signal yh
         yh = librosa.effects.harmonic(y, margin=8)
-        C = librosa.amplitude_to_db(librosa.cqt(y=yh, sr=sr,
+        C = librosa.amplitude_to_db(np.abs(librosa.cqt(y=yh, sr=sr,
                                                 bins_per_octave=BPO,
-                                                n_bins=N_OCTAVES * BPO),
+                                                n_bins=N_OCTAVES * BPO)),
                                     ref=np.max)
         print_verbose("chroma {}".format(C.shape), LOG)
         # Synchronize (harmonic-derived) CQT to beats (framewise)
         Hsync = librosa.util.sync(C, beats, aggregate=np.median)
 
         # Compute deep similarity embeddings
+        from .deepsim import run_deepsim_inference
         modelgrid = deepsim_model
         embedding_as_list = run_deepsim_inference(
             y,
@@ -1063,6 +1077,7 @@ def make_beat_sync_features(filename,
             # Synchronize MFCC features to beats (framewise)
             Msync = librosa.util.sync(mfcc, beats)
         else:
+            from .fewshot import run_fewshot_inference
             emb = run_fewshot_inference(filename16, fewshot_model).T
             # Synchronize fewshot features to beats (framewise)
             Msync = librosa.util.sync(emb, beats)
