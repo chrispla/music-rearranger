@@ -29,7 +29,9 @@ intra_levels_list: [2, 3, 4, 5, 6]  # levels to search for intra-segment connect
 transition_types: ideal  # ideal: only between points with rank=1
                          # nonnegative: only foward transitions
                          # all: all transitions
-path_finding_algorithm: less_transitions  # greedy search for up to 3 transitions
+path_finding_algorithm: sparse_dijkstra  # sparse Dijkstra search over transition points
+path_tolerance_beats: null  # if null, search for the exact rounded target beat count
+path_max_tolerance_beats: null  # if null, fallback search expands up to eight measures
 
 # AUDIO RECONSTRUCTION
 crossfade: 0.1  # crossfade duration in seconds for transitions

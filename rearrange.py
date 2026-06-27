@@ -17,7 +17,8 @@ from rearranger.formatting import (get_target_n_beats, get_unique_segments,
 from rearranger.identification import (common_patterns, cross_segment_points,
                                        intra_segment_points)
 from rearranger.optimization import (get_transitions,
-                                     less_transitions_algorithm, greedy_deep_search)
+                                     less_transitions_algorithm, greedy_deep_search,
+                                     sparse_dijkstra_search)
 from rearranger.plotting import save_useful_plots
 from rearranger.segmentation import fast_segmentation, precise_segmentation
 
@@ -141,7 +142,7 @@ if __name__ == "__main__":
         n_measures=config["min_measure"],
         beat_analysis=beat_analysis,
         beat_times=beat_times)
-    segmentation_n_measures_unique = get_unique_segments(segmentation_beats)
+    segmentation_n_measures_unique = get_unique_segments(segmentation_n_measures)
 
     print("> Identifying transition points...")
     # Get patterns
@@ -190,8 +191,8 @@ if __name__ == "__main__":
             n_beats=patterns.shape[0])
     elif config["path_finding_algorithm"] == "less_transitions":
         import warnings
-        warnings.warn("""Searching for rearrangement with up to 3 transitions. The solution
-                         might not be found, or might not be optimal.""",
+        warnings.warn("""The 'less_transitions' path finder is deprecated. Using the
+                         sparse Dijkstra search instead.""",
                       stacklevel=2)
         beat_list = less_transitions_algorithm(
             transitions=transitions,
@@ -199,6 +200,17 @@ if __name__ == "__main__":
             target_beats=get_target_n_beats(target_seconds, beat_analysis),
             total_beats=patterns.shape[0],
             beat_analysis=beat_analysis)
+    elif config["path_finding_algorithm"] in ["sparse_dijkstra", "dijkstra", "optimal"]:
+        beat_list = sparse_dijkstra_search(
+            transitions=transitions,
+            similarities=similarities,
+            target_beats=get_target_n_beats(target_seconds, beat_analysis),
+            total_beats=patterns.shape[0],
+            beat_analysis=beat_analysis,
+            tolerance_beats=config.get("path_tolerance_beats"),
+            max_tolerance_beats=config.get("path_max_tolerance_beats"))
+    else:
+        raise ValueError("Invalid path finding algorithm.")
 
     print("> Saving rearrangement...")
     # Construct audio
@@ -208,7 +220,7 @@ if __name__ == "__main__":
         sr=sr,
         recon_beats=beat_list,
         beat_times=beat_times,
-        crossfade=0.1)
+        crossfade=config["crossfade"])
 
     # Write audio
     if output_dir is None:
