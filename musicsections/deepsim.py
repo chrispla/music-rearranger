@@ -1,10 +1,10 @@
 import librosa
 import os
 import numpy as np
-import tensorflow.compat.v1.keras.backend as K
-from tensorflow.compat.v1.keras.models import load_model
 import json
 import tensorflow as tf
+import h5py
+from tensorflow.keras.models import model_from_json
 
 
 def configure_gpus():
@@ -66,7 +66,7 @@ def compute_mel_features(query, args, emb_hop=1, verbose=False, magicnorm=True):
     # Construct frames
     all_frames = mel_S.shape[0]
     num_frames = 129  # mel frames for computing embedding, 129 = 3s
-    num_segment = int((all_frames - num_frames) / emb_hop)
+    num_segment = int(np.ceil((all_frames - num_frames) / emb_hop))
 
     mel_feat = np.zeros((num_segment, num_frames, 128))
     frame_idx = 0
@@ -139,14 +139,18 @@ def run_deepsim_inference(query, base_model, args, session, verbose=False, magic
     idx = 0
     feats = []
 
-    with session.as_default():
-        with session.graph.as_default():
-            while idx < log_mels.shape[0]:
-                if verbose:
-                    print("sim frames {}:{}".format(idx, idx + n_mel_frames))
-                emb = np.array(base_model.predict(log_mels[idx:idx + n_mel_frames]))
-                feats.extend(emb.tolist())
-                idx += n_mel_frames
+    while idx < log_mels.shape[0]:
+        if verbose:
+            print("sim frames {}:{}".format(idx, idx + n_mel_frames))
+        batch = log_mels[idx:idx + n_mel_frames]
+        if session is None:
+            emb = np.array(base_model.predict(batch, verbose=0))
+        else:
+            with session.as_default():
+                with session.graph.as_default():
+                    emb = np.array(base_model.predict(batch))
+        feats.extend(emb.tolist())
+        idx += n_mel_frames
 
     feats = np.asarray(feats)
     if verbose:
@@ -169,13 +173,20 @@ class DeepSimModel:
         pass
 
     def initialize(self, model_filepath, arg_filepath):
-        self.session = tf.compat.v1.keras.backend.get_session()
+        self.session = None
 
-        # Get base model.
-        with self.session.as_default():
-            with self.session.graph.as_default():
-                model = load_model(model_filepath, compile=False, custom_objects={"K": K})
-                self.base_model = model.get_layer('base_model')
+        # The shipped DeepSim H5 was saved with old Keras outer training heads
+        # whose Lambda bytecode no longer deserializes on modern Python. The
+        # nested base model is pure JSON + weights and can be loaded directly.
+        with h5py.File(model_filepath, "r") as handle:
+            model_config = json.loads(handle.attrs["model_config"])
+        base_config = next(
+            layer
+            for layer in model_config["config"]["layers"]
+            if layer.get("name") == "base_model"
+        )
+        self.base_model = model_from_json(json.dumps(base_config))
+        self.base_model.load_weights(model_filepath, by_name=True)
 
         # Get arguments
         with open(arg_filepath, 'r') as f:
