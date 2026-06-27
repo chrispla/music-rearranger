@@ -7,7 +7,7 @@ Code for "Music rearrangement using hierarchical segmentation" ICASSP 2023 paper
 
 ### Disclaimer
 
-This code is not 100% reflecting the methods described in the paper. Most notably, the path finding approach has been replaced with a simpler one until I manage to debug the original. This simpler one, however, might sometimes fail to find a path.
+This code is not 100% reflecting every detail described in the paper, but the path finding stage now follows the sparse graph-search formulation described there. It searches over the identified transition points with a Dijkstra-style optimization instead of limiting the rearrangement to a small fixed number of cuts.
 
 I'm aiming to develop this package further, including doing some work on finding more optimal default parameters for the segmentation and transition point identification configuration. Submiting issues and pull request is welcomed and appreciated.
 
@@ -30,6 +30,15 @@ Then, create a python environment with python=3.7 and install the dependencies i
 conda create -n rearranger python=3.7
 conda activate rearranger
 pip install -r requirement.txt
+```
+
+For Apple Silicon/macOS, use the uv-based setup in `requirements-macos-uv.txt` instead. It pins a modern Python 3.11 stack that runs the fast segmentation pipeline locally:
+
+```bash
+brew install portaudio
+uv venv .venv --python 3.11
+uv pip install --python .venv/bin/python -r requirements-macos-uv.txt
+uv pip install --python .venv/bin/python madmom==0.16.1 --no-build-isolation
 ```
 
 ### Running
@@ -59,6 +68,12 @@ Other useful options include:
 `--config`: path to configuration file with various segmentation, transition identification, and path finding parameters.
 
 `--plot` (flag): whether to save plots of the features and segmentation that is computed.
+
+To run the real segmentation benchmark on 10 open MP3s and generate cutpoint/path diagnostics:
+
+```bash
+.venv/bin/python scripts/real_segmentation_benchmark.py --limit 10 --plot-segmentation
+```
 
 ### Reference
 
