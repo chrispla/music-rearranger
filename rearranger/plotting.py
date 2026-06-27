@@ -70,35 +70,41 @@ def save_useful_plots(
     fig.subplots_adjust(top=0.8)  # Otherwise savefig cuts the top
     plt.title(f"{output_name} {seg_method} segmentation")
     plt.savefig(os.path.join(fig_dir, f"{output_name}_{seg_method}_segmentation.png"))
+    plt.close(fig)
 
     if seg_method == "precise":
         # plot Csync
-        plt.figure()
+        fig = plt.figure()
         plt.imshow(Csync)
         plt.title(f"{output_name} DeepSim features")
         plt.savefig(os.path.join(fig_dir, f"{output_name}_{seg_method}_DeepSim.png"))
+        plt.close(fig)
 
         # plot Msync
-        plt.figure()
+        fig = plt.figure()
         plt.imshow(Msync)
         plt.title(f"{output_name} Few-Shot features")
         plt.savefig(os.path.join(fig_dir, f"{output_name}_{seg_method}_Few-Shot.png"))
+        plt.close(fig)
 
         # plot Hsync
-        plt.figure()
+        fig = plt.figure()
         plt.imshow(Hsync)
         plt.title(f"{output_name} Harmonic CQT")
         plt.savefig(os.path.join(fig_dir, f"{output_name}_{seg_method}_CQT.png"))
+        plt.close(fig)
 
     elif seg_method == "fast":
         # plot Msync
-        plt.figure()
+        fig = plt.figure()
         plt.imshow(Msync)
         plt.title(f"{output_name} MFCCs")
         plt.savefig(os.path.join(fig_dir, f"{output_name}_{seg_method}_MFCCs.png"))
+        plt.close(fig)
 
         # plot Hsync
-        plt.figure()
+        fig = plt.figure()
         plt.imshow(Hsync)
         plt.title(f"{output_name} Harmonic CQT")
         plt.savefig(os.path.join(fig_dir, f"{output_name}_{seg_method}_CQT.png"))
+        plt.close(fig)

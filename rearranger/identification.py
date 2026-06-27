@@ -290,7 +290,8 @@ def intra_segment_points(segmentation,
 
                 active_d = False
                 entry_p = -1
-                while y < boundaries[1]:
+                end_boundary = min(boundaries[1], patterns.shape[0])
+                while x < end_boundary and y < end_boundary:
                     if patterns[x, y] != 0:
                         if active_d is False:
                             entry_p = [x, y]
