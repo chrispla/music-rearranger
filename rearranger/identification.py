@@ -181,12 +181,15 @@ def get_all_transition_points(current_boundaries,
     for d in diagonals:
         if len(d) < 2:
             # hm, but is the boundary really better than a single point match?
-            return [(0, 0)]
+            continue
         point = d[int(np.ceil(len(d)/2))]
         similarity = patterns[
             current_boundaries[1] + point,
             candidate_boundaries[0] + point]
         all_points.append((point, similarity))
+
+    if not all_points:
+        return [(0, 0)]
 
     return all_points
 

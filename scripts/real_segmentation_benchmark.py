@@ -34,7 +34,11 @@ from rearranger.identification import (  # noqa: E402
     cross_segment_points,
     intra_segment_points,
 )
-from rearranger.optimization import get_transitions, sparse_dijkstra_search  # noqa: E402
+from rearranger.optimization import (  # noqa: E402
+    get_transitions,
+    sparse_dijkstra_search,
+    sparse_dijkstra_seconds_search,
+)
 from rearranger.plotting import save_useful_plots  # noqa: E402
 from rearranger.segmentation import fast_segmentation, precise_segmentation  # noqa: E402
 from scripts.real_audio_benchmark import (  # noqa: E402
@@ -330,15 +334,26 @@ def run_track(title, filename, config, args, audio_dir, out_dir):
         target_seconds = int(round(original_seconds * ratio))
         target_beats = get_target_n_beats(target_seconds, beat_analysis)
         start_time = time.perf_counter()
-        beat_list = sparse_dijkstra_search(
-            transitions=transitions,
-            similarities=similarities,
-            target_beats=target_beats,
-            total_beats=patterns.shape[0],
-            beat_analysis=beat_analysis,
-            tolerance_beats=config.get("path_tolerance_beats"),
-            max_tolerance_beats=config.get("path_max_tolerance_beats"),
-        )
+        if args.search_objective == "seconds":
+            beat_list = sparse_dijkstra_seconds_search(
+                transitions=transitions,
+                similarities=similarities,
+                target_seconds=target_seconds,
+                total_beats=patterns.shape[0],
+                beat_times=beat_times,
+                beat_analysis=beat_analysis,
+                seconds_quantization=args.seconds_quantization,
+            )
+        else:
+            beat_list = sparse_dijkstra_search(
+                transitions=transitions,
+                similarities=similarities,
+                target_beats=target_beats,
+                total_beats=patterns.shape[0],
+                beat_analysis=beat_analysis,
+                tolerance_beats=config.get("path_tolerance_beats"),
+                max_tolerance_beats=config.get("path_max_tolerance_beats"),
+            )
         path_runtime_ms = (time.perf_counter() - start_time) * 1000
 
         audio_out = track_dir / f"{slug}_{target_seconds}s.wav"
@@ -479,6 +494,8 @@ def parse_args():
     parser.add_argument("--limit", type=int, default=10)
     parser.add_argument("--target-ratios", type=float, nargs="+", default=[0.65, 0.8, 1.2])
     parser.add_argument("--transition-types", choices=["ideal", "nonnegative", "all"])
+    parser.add_argument("--search-objective", choices=["beats", "seconds"], default="beats")
+    parser.add_argument("--seconds-quantization", type=float, default=0.1)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--plot-segmentation", action="store_true")
     args = parser.parse_args()

@@ -98,6 +98,14 @@ def _path_duration(beats):
     return duration
 
 
+def _path_seconds(beats, beat_times):
+    duration = 0
+    for current, candidate in zip(beats[:-1], beats[1:]):
+        if candidate == current + 1:
+            duration += beat_times[candidate] - beat_times[current]
+    return duration
+
+
 def sparse_dijkstra_search(
     transitions,
     similarities,
@@ -193,6 +201,106 @@ def sparse_dijkstra_search(
     duration = _path_duration(beat_list)
     if duration != final_state[1]:
         raise RuntimeError("Internal path duration accounting failed.")
+
+    return beat_list
+
+
+def sparse_dijkstra_seconds_search(
+    transitions,
+    similarities,
+    target_seconds,
+    total_beats,
+    beat_times,
+    beat_analysis=None,
+    seconds_quantization=0.1,
+    tolerance_seconds=0.5,
+    max_tolerance_seconds=None,
+):
+    """Find a rearrangement path by optimizing output duration in seconds.
+
+    This uses the same sparse transition graph as ``sparse_dijkstra_search``,
+    but normal playback edges add their actual source beat duration rather
+    than one abstract beat. Durations are quantized to keep the state space
+    finite while preserving enough precision for second-level targets.
+    """
+
+    if seconds_quantization <= 0:
+        raise ValueError("seconds_quantization must be positive.")
+    beat_times = list(beat_times)
+    if len(beat_times) < total_beats + 1:
+        raise ValueError("beat_times must include every source beat boundary.")
+    beat_time_bins = [
+        int(round(float(beat_time) / seconds_quantization))
+        for beat_time in beat_times
+    ]
+
+    if max_tolerance_seconds is None:
+        beats_in_measure = _get_beats_in_measure(beat_analysis)
+        mean_beat_duration = beat_times[-1] / max(1, total_beats)
+        max_tolerance_seconds = max(tolerance_seconds, beats_in_measure * 8 * mean_beat_duration)
+
+    target_bin = int(round(target_seconds / seconds_quantization))
+    tolerance_bin = int(round(tolerance_seconds / seconds_quantization))
+    max_output_seconds = max(
+        float(beat_times[-1]),
+        float(target_seconds) + float(max_tolerance_seconds))
+    max_output_bin = int(round(max_output_seconds / seconds_quantization))
+
+    adjacency = _build_adjacency(transitions, similarities, total_beats)
+
+    start = (0, 0)
+    distances = {start: (0, 0)}
+    parent = {start: None}
+    counter = itertools.count()
+    queue = [(0, 0, next(counter), start)]
+
+    best_goal = None
+    best_goal_key = None
+
+    while queue:
+        cost, n_jumps, _, state = heapq.heappop(queue)
+        if distances.get(state) != (cost, n_jumps):
+            continue
+
+        current, duration_bin = state
+
+        if current == total_beats:
+            duration_error = abs(duration_bin - target_bin)
+            outside_tolerance = max(0, duration_error - tolerance_bin)
+            goal_candidate_key = (outside_tolerance, duration_error, cost, n_jumps)
+            if best_goal_key is None or goal_candidate_key < best_goal_key:
+                best_goal_key = goal_candidate_key
+                best_goal = state
+            continue
+
+        for candidate, _, edge_cost, jump_step in adjacency[current]:
+            if candidate == current + 1:
+                duration_step = max(1, beat_time_bins[candidate] - beat_time_bins[current])
+            else:
+                duration_step = 0
+
+            next_duration_bin = duration_bin + duration_step
+            if next_duration_bin > max_output_bin:
+                continue
+
+            next_state = (candidate, next_duration_bin)
+            next_distance = (cost + edge_cost, n_jumps + jump_step)
+            if next_distance < distances.get(next_state, (float("inf"), float("inf"))):
+                distances[next_state] = next_distance
+                parent[next_state] = state
+                heapq.heappush(queue, (
+                    next_distance[0],
+                    next_distance[1],
+                    next(counter),
+                    next_state))
+
+    if best_goal is None:
+        raise ValueError("No path from the first beat to the final beat was found.")
+
+    beat_list = _reconstruct_path(parent, best_goal)
+    duration_seconds = _path_seconds(beat_list, beat_times)
+    if duration_seconds < 0:
+        raise RuntimeError("Internal path seconds accounting failed.")
 
     return beat_list
 

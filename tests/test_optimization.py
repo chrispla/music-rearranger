@@ -4,6 +4,7 @@ from rearranger.optimization import (
     get_transitions,
     less_transitions_algorithm,
     sparse_dijkstra_search,
+    sparse_dijkstra_seconds_search,
 )
 
 
@@ -114,6 +115,44 @@ class SparseDijkstraSearchTest(unittest.TestCase):
             beat_analysis=[[0, 1], [1, 2], [2, 3], [3, 4]])
 
         self.assertEqual(path_duration(path), 8)
+
+
+class SparseDijkstraSecondsSearchTest(unittest.TestCase):
+    def test_forward_jump_skips_slow_region_to_hit_seconds(self):
+        transitions, similarities = get_transitions(
+            points=[([1, 2], 1.0)],
+            n_beats=3,
+            type="ideal",
+            neighbors=True)
+
+        path = sparse_dijkstra_seconds_search(
+            transitions=transitions,
+            similarities=similarities,
+            target_seconds=2,
+            total_beats=3,
+            beat_times=[0, 1, 11, 12],
+            beat_analysis=[[0, 1], [1, 2], [11, 3], [12, 4]],
+            seconds_quantization=0.1)
+
+        self.assertEqual(path, [0, 1, 2, 3])
+
+    def test_backward_jump_extends_to_target_seconds(self):
+        transitions, similarities = get_transitions(
+            points=[([2, 1], 1.0)],
+            n_beats=3,
+            type="ideal",
+            neighbors=True)
+
+        path = sparse_dijkstra_seconds_search(
+            transitions=transitions,
+            similarities=similarities,
+            target_seconds=4,
+            total_beats=3,
+            beat_times=[0, 1, 2, 3],
+            beat_analysis=[[0, 1], [1, 2], [2, 3], [3, 4]],
+            seconds_quantization=0.1)
+
+        self.assertEqual(path, [0, 1, 2, 1, 2, 3])
 
 
 if __name__ == "__main__":
